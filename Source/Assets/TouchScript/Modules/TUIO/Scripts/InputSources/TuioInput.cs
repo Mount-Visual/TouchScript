@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using TouchScript.Pointers;
 using TouchScript.Utils;
 using UnityEngine;
+using UnityEngine.Assertions;
 using TuioClient = MountVisual.TuioClient;
 
 namespace TouchScript.InputSources
@@ -16,6 +17,8 @@ namespace TouchScript.InputSources
     public sealed class TuioInput : InputSource
     {
         #region Private variables
+        private TuioClient.TuioInput _tuioInputClient;
+
         /// <summary>
         /// Map to link TuioCursors to TouchPointers. Key is TuioCusor.SessionID and Value is the TouchPointer.
         /// </summary>
@@ -34,18 +37,30 @@ namespace TouchScript.InputSources
         #endregion
 
         #region Lifecycle
+        private void Awake() 
+        {
+            _tuioInputClient = FindObjectOfType<TuioClient.TuioInput>();
+            Assert.IsNotNull(_tuioInputClient);
+        }
+
         protected override void init()
         {
-            TuioClient.TuioInput.Instance.OnCursorAdded += OnCursorAdded;
-            TuioClient.TuioInput.Instance.OnCursorUpdated += OnCursorUpdated;
-            TuioClient.TuioInput.Instance.OnCursorRemoved += OnCursorRemoved;
+            if (_tuioInputClient != null)
+            {
+                _tuioInputClient.OnCursorAdded += OnCursorAdded;
+                _tuioInputClient.OnCursorUpdated += OnCursorUpdated;
+                _tuioInputClient.OnCursorRemoved += OnCursorRemoved;
+            }
         }
 
         protected override void OnDisable()
         {
-            TuioClient.TuioInput.Instance.OnCursorAdded -= OnCursorAdded;
-            TuioClient.TuioInput.Instance.OnCursorUpdated -= OnCursorUpdated;
-            TuioClient.TuioInput.Instance.OnCursorRemoved -= OnCursorRemoved;
+            if (_tuioInputClient != null)
+            {
+                _tuioInputClient.OnCursorAdded -= OnCursorAdded;
+                _tuioInputClient.OnCursorUpdated -= OnCursorUpdated;
+                _tuioInputClient.OnCursorRemoved -= OnCursorRemoved;
+            }           
 
             base.OnDisable();
         }
@@ -158,8 +173,8 @@ namespace TouchScript.InputSources
         {
             lock (this)
             {
-                var x = tuioCursor.Position.x * screenWidth;
-                var y = (1 - tuioCursor.Position.y) * screenHeight;
+                var x = tuioCursor.NormalizedPosition.x * screenWidth;
+                var y = tuioCursor.NormalizedPosition.y * screenHeight;
                 cursorSessionIdToTouch.Add(tuioCursor.SessionId, internalAddTouch(new Vector2(x, y)));
             }
         }
@@ -171,8 +186,8 @@ namespace TouchScript.InputSources
                 TouchPointer touch;
                 if (!cursorSessionIdToTouch.TryGetValue(tuioCursor.SessionId, out touch)) return;
 
-                var x = tuioCursor.Position.x * screenWidth;
-                var y = (1 - tuioCursor.Position.y) * screenHeight;
+                var x = tuioCursor.NormalizedPosition.x * screenWidth;
+                var y = tuioCursor.NormalizedPosition.y * screenHeight;
 
                 touch.Position = remapCoordinates(new Vector2(x, y));
                 updatePointer(touch);
