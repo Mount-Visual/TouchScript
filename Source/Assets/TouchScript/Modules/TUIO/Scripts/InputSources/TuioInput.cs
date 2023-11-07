@@ -40,7 +40,26 @@ namespace TouchScript.InputSources
         private void Awake() 
         {
             _tuioInputClient = FindObjectOfType<TuioClient.TuioInput>();
-            Assert.IsNotNull(_tuioInputClient);
+            Assert.IsNotNull(_tuioInputClient, "TuioClient's TuioInput not found in the scene.");
+
+            if (_tuioInputClient.SystemConfig.GetType() == typeof(TuioClient.TuioConfig))
+            {
+                enabled = true;
+
+                foreach (var inputSource in GetComponents<InputSource>())
+                {
+                    if (inputSource != this)
+                    {
+                        Debug.Log($"[TouchScript] MountVisual.TuioClient.TuioInput is configured with TuioConfig. Disabling {inputSource.GetType()} attached to TouchManager.");
+                        inputSource.enabled = false;
+                    }
+                }
+            }
+            else
+            {
+                Debug.Log($"[TouchScript] MountVisual.TuioClient.TuioInput is not configured with TuioConfig. Disabling TuioInput (InputSource) of TouchScript.");
+                enabled = false;
+            }
         }
 
         protected override void init()
